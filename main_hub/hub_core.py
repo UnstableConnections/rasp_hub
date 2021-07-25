@@ -4,7 +4,7 @@ from struct import *
 # See: https://docs.python.org/3/library/struct.html#struct.pack
 
 STRUCT_TYPE = 'Hs'
-STRUCT_REGISTER_PACK = 'HI'
+STRUCT_REGISTER_PACK = 'HII'
 STRUCT_REGISTER_OK = 'H'
 STRUCT_SET_COEF = 'HI'
 STRUCT_SET_TASK = 'HI'
@@ -27,13 +27,33 @@ class HubCore():
     def handle_message(data, client_addr):
         packet_type = unpack(STRUCT_TYPE, data)
 
-        if(packet_type == TYPE_REGISTER):
-            msg_type, hub_id = unpack(STRUCT_REGISTER_PACK, data)
-            answer = pack(STRUCT_REGISTER_OK)
-            answers.append(answer)
+        if packet_type == TYPE_REGISTER:
+            msg_type, hub_id, hub_state = unpack(STRUCT_REGISTER_PACK, data)
 
-        elif(packet_type == TYPE_PRODUCED_Q):
+            if hub_id in self.conf_table:
+
+                if hub_state == STATE_INITED:
+                    answer = pack(STRUCT_REGISTER_OK, TYPE_REGISTER_OK)
+                    answers.append(answer)
+                elif hub_state == STATE_REGISTERED:
+                    answer = pack(STRUCT_SET_COEF, TYPE_SET_COEF, self.conf_table[hub_id]['Q'] * 100 )
+                    answers.append(answer)
+                elif hub_state == STATE_CONFIGURED:
+                    answer = pack(STRUCT_SET_TASK, TYPE_SET_TASK, 600) # Need algo mock
+                    answers.append(answer)
+                elif hub_state == STATE_TASK_SET:
+                    need_get_q = False # Add timer
+
+                    if need_get_q:
+                        answer = pack(STRUCT_GET_Q, TYPE_GET_Q)
+                        answers.append(answer)
+
+        elif packet_type == TYPE_PRODUCED_Q:
             msg_type, prod_q = unpack(STRUCT_PRODUCED_Q, data)
+            self.conf_table[HUM_MAIN]['vanadium'] = self.conf_table[HUM_MAIN]['vanadium'] + prod_q
+
+            answer = pack(STRUCT_SET_TASK, TYPE_SET_TASK, 600)
+            answers.append(answer)
 
         answers = []
 
