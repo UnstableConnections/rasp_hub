@@ -5,3 +5,6 @@
 /.vs
 /env/Lib
 /env/Scripts
+/main_hub/env/Lib
+/main_hub/env/Scripts
+/main_hub/__pycache__

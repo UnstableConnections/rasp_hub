@@ -1,0 +1,1 @@
+hubs_conf_table = {}
