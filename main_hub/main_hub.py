@@ -1,41 +1,35 @@
-from conf_table import hubs_conf_table
-import socket
+from hub_core import HubCore
+import socketserver
 import sys
+import time
+
+core = HubCore
+
+# See:  https://docs.python.org/3/library/socketserver.html#module-socketserver
+
+class SateliteHandler(socketserver.BaseRequestHandler):
+
+    def handle(self):
+        # self.request is the TCP socket connected to the client
+        self.data = self.request.recv(1024).strip()
+        
+        print("{} wrote:".format(self.client_address[0]))
+        print(self.data)
+
+        # send message to processing
+        answers = core.handle_message(self.data, self.client_address[0])
+        
+        for answ in answers:
+            # answer hub
+            self.request.sendall(answ)
+            time.sleep(1) # pause 1 sec
 
 
-HUB_PORT = 10000
+if __name__ == "__main__":
+    HOST, PORT = "localhost", 10000
 
-# Create a TCP/IP socket
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-# Bind the socket to the port
-server_address = ('localhost', HUB_PORT)
-print('starting up on %s port %s' % server_address)
-sock.bind(server_address)
-
-# Listen for incoming connections
-sock.listen(20)
-
-
-while True:
-    # Wait for a connection
-    print('waiting for a connection')
-    connection, client_address = sock.accept()
- 
-    try:
-        print('connection from', client_address)
-
-        # Receive the data in small chunks and retransmit it
-        while True:
-            data = connection.recv(16)
-            print('received "%s"', data)
-            if data:
-                print('sending data back to the client')
-                connection.sendall(data)
-            else:
-                print('no more data from', client_address)
-                break
-            
-    finally:
-        # Clean up the connection
-        connection.close() 
+    # Create the server, binding to localhost 
+    with socketserver.TCPServer((HOST, PORT), SateliteHandler) as server:
+        # Activate the server; this will keep running until you
+        # interrupt the program with Ctrl-C
+        server.serve_forever()
