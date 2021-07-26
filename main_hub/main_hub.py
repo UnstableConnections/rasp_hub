@@ -3,7 +3,7 @@ import socketserver
 import sys
 import time
 
-core = HubCore
+core = HubCore()
 
 # See:  https://docs.python.org/3/library/socketserver.html#module-socketserver
 
@@ -19,17 +19,19 @@ class SateliteHandler(socketserver.BaseRequestHandler):
         # send message to processing
         answers = core.handle_message(self.data, self.client_address[0])
         
-        for answ in answers:
-            # answer hub
-            self.request.sendall(answ)
-            time.sleep(1) # pause 1 sec
+        if len(answers) > 0:
+            for answ in answers:
+                # answer hub
+                self.request.sendall(answ)
+                # time.sleep(1) # pause 1 sec
 
 
 if __name__ == "__main__":
-    HOST, PORT = "localhost", 10000
+    HOST, PORT = "192.168.100.111", 10000
 
     # Create the server, binding to localhost 
     with socketserver.TCPServer((HOST, PORT), SateliteHandler) as server:
         # Activate the server; this will keep running until you
         # interrupt the program with Ctrl-C
+        print("Starting server on " + HOST + ":" + str(PORT))
         server.serve_forever()
