@@ -1,8 +1,8 @@
 #include <ESP8266WiFi.h>
 
 // Replace with your network credentials
-const char* ssid     = "***********";
-const char* password = "***********";
+const char* ssid     = "UNSTABLE";
+const char* password = "CONNECTIONS";
 
 const long TYPE_REGISTER    = 0x0001;
 const long TYPE_REGISTER_OK = 0x0002;
@@ -22,6 +22,8 @@ const long STATE_NEED_GET_Q = 4;
 unsigned long currentTime = millis();
 // Previous time
 unsigned long last_connect_time = 0;
+// Last timer up time
+unsigned long last_inc_time = millis();
 // Define timeout time in milliseconds (example: 2000ms = 2s)
 const long timeoutTime = 2000;
 
@@ -30,15 +32,24 @@ char msg_buff[128];
 const int HUB_IDENTIFIER = 0;
 unsigned int state = STATE_INITED;
 float coef = 0;
-unsigned int t_work = 0;
+float t_work = 0;
 unsigned int t_max = 0;
 unsigned int q_produced = 0;
 unsigned int task_time = 0;
+unsigned int session_init = 0;
 const int CONNECTION_DELAY = 20000;
+
+#define LED_PIN 2
+#define BTN_PIN 12
 
 WiFiClient client;
 
 void setup() {
+   pinMode( LED_PIN, OUTPUT);
+   pinMode( BTN_PIN, INPUT);
+
+   digitalWrite(LED_PIN, HIGH);
+   
    Serial.begin(115200);
   // Initialize the output variables as outputs
 
@@ -80,6 +91,8 @@ void build_q_message() {
   unsigned int* hub_state = (unsigned int*)(msg_buff+6);
   unsigned int* tsk_q = (unsigned int*)(msg_buff+10);
   char* msg_end = msg_buff+14;
+
+  q_produced = t_work * coef * 100;
 
   *msg_header = TYPE_PRODUCED_Q;
   *hub_id = HUB_IDENTIFIER;
@@ -148,7 +161,9 @@ void handle_answer() {
         break;
       case TYPE_GET_Q:
         Serial.println("Get TYPE_GET_Q");
-        state = STATE_NEED_GET_Q;                
+        state = STATE_NEED_GET_Q;
+        session_init = 0;
+        digitalWrite(LED_PIN, HIGH);                
         break;      
     }
 }
@@ -161,7 +176,7 @@ void handle_network() {
     if (!client.connected()) {
     //delay(1000);
     
-    if (client.connect("192.168.100.111", 10000)) {
+    if (client.connect("192.168.0.1", 10000)) {
       Serial.println("Connected to main_hub");
       last_connect_time = millis();
 
@@ -176,12 +191,42 @@ void handle_network() {
   }
 }
 
-void loop() {
 
+void inc_timer() {
+  unsigned long check_diff = currentTime - last_inc_time;
+  
+  if(state == STATE_TASK_SET && check_diff > 1000 ) { //once in a sec
+    
+    if(session_init && t_work < t_max){
+      t_work = t_work + 1;
+      Serial.print("t_work: ");
+      Serial.println(t_work);
+    }
+    last_inc_time = millis();
+  }
+}
+
+
+void loop() {
+  currentTime = millis();
+  unsigned int pin_state = digitalRead(BTN_PIN);
+
+  if( pin_state == 1 ){
+    session_init ^= 1;
+     
+    if(session_init) {
+      digitalWrite(LED_PIN, LOW);
+      Serial.println("Session init");
+    } else {
+      digitalWrite(LED_PIN, HIGH);
+    }
+    delay(500);
+  }
+  
   bool need_connect = false;
   switch(state){
     case STATE_TASK_SET:
-      if(  millis() - last_connect_time > CONNECTION_DELAY){
+      if(  currentTime - last_connect_time > CONNECTION_DELAY){
         need_connect = true;
       } else handle_answer();
     break;
@@ -195,12 +240,6 @@ void loop() {
   handle_network();
  }
 
-  switch(state) {
-      case STATE_INITED: break;
-      case STATE_REGISTERED: break;
-      case STATE_CONFIGURED: break;
-      case STATE_TASK_SET: break;
-      case STATE_NEED_GET_Q: break;
- }
+ inc_timer();
 
 }
