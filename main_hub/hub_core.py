@@ -11,6 +11,7 @@ STRUCT_SET_COEF = '<HI'
 STRUCT_SET_TASK = '<HII'
 STRUCT_GET_Q = '<H'
 STRUCT_PRODUCED_Q = '<HIII'
+STRUCT_INFORM = '<HI'
 
 TYPE_REGISTER    = 0x0001
 TYPE_REGISTER_OK = 0x0002
@@ -18,14 +19,17 @@ TYPE_SET_COEF    = 0x0003
 TYPE_SET_TASK    = 0x0004
 TYPE_GET_Q       = 0x0005
 TYPE_PRODUCED_Q  = 0x0006
+TYPE_INFORM_Q    = 0x0007
 
 STATE_INITED     = 0
 STATE_REGISTERED = 1
 STATE_CONFIGURED = 2
 STATE_TASK_SET   = 3
 STATE_NEED_GET_Q = 4
+STATE_INFORM     = 5
 
-HUB_MAIN = 999
+HUB_INFORM = 998
+HUB_MAIN   = 999
 
 
 class HubCore():
@@ -78,6 +82,9 @@ class HubCore():
                         print("Send TYPE_GET_Q")
                         answer = pack(STRUCT_GET_Q, TYPE_GET_Q)
                         answers.append(answer)
+                elif hub_state == STATE_INFORM:
+                    answer = pack(STRUCT_INFORM, TYPE_INFORM_Q, int(self.conf_table[HUB_MAIN]['vanadium'] * 100))
+                    answers.append(answer)
 
         elif packet_type == TYPE_PRODUCED_Q:
             print("Get TYPE_PRODUCED_Q")
@@ -85,9 +92,10 @@ class HubCore():
             print("register_pack: " + str(register_pack))
 
             msg_type, hub_id, hub_state, prod_q = unpack(STRUCT_PRODUCED_Q, data)
+            prod_q = prod_q / 100.
             print("msg_type: " + str(msg_type) + " hub_id: " + str(hub_id) + " hub_state: " + str(hub_state) + " prod_q: " + str(prod_q))
 
-            self.conf_table[HUB_MAIN]['vanadium'] = self.conf_table[HUB_MAIN]['vanadium'] + prod_q
+            self.conf_table[HUB_MAIN]['vanadium'] = self.conf_table[HUB_MAIN]['vanadium'] + prod_q 
 
             task_time = int(time.time())
             answer = pack(STRUCT_SET_TASK, TYPE_SET_TASK, 600, task_time)

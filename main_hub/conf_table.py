@@ -11,6 +11,7 @@ HUB_9 = 9
 HUB_10 = 10
 HUB_11 = 11
 HUB_12 = 12
+HUB_INFORM = 998
 HUB_MAIN = 999
 
 hubs_conf_table = {
@@ -66,6 +67,9 @@ hubs_conf_table = {
             'Q': 0.35,   
             'set_task_time': 0
             },
+    HUB_INFORM : {
+            
+        },
     HUB_MAIN : {
             'vanadium': 0
         }
