@@ -4,6 +4,7 @@
 const char* ssid     = "UNSTABLE";
 const char* password = "CONNECTIONS";
 
+
 const long TYPE_REGISTER    = 0x0001;
 const long TYPE_REGISTER_OK = 0x0002;
 const long TYPE_SET_COEF    = 0x0003;
@@ -37,7 +38,8 @@ unsigned int t_max = 0;
 unsigned int q_produced = 0;
 unsigned int task_time = 0;
 unsigned int session_init = 0;
-const int CONNECTION_DELAY = 20000;
+const int CONNECTION_DELAY = 40000;
+unsigned int wifi_state = 0;
 
 #define LED_PIN 2
 #define BTN_PIN 12
@@ -66,6 +68,7 @@ void setup() {
   Serial.println("WiFi connected.");
   Serial.println("IP address: ");
   Serial.println(WiFi.localIP());
+  wifi_state = 1;
   
 }
 
@@ -116,7 +119,11 @@ void handle_answer() {
 
       if(attempts > 5){
         Serial.println("No answer from main_hub disconnect");
-        client.stop();
+        client.stop();                
+        if (WiFi.getPersistent() == true) WiFi.persistent(false);   //disable saving wifi config into SDK flash area
+        WiFi.mode(WIFI_OFF); // off  WIFI
+        WiFi.persistent(true);   //enable saving wifi config into SDK flash area
+        wifi_state = 0;
         return;
       }
     }
@@ -158,6 +165,10 @@ void handle_answer() {
         state = STATE_TASK_SET;
         Serial.println("Task set, disconnecting");
         client.stop();
+        if (WiFi.getPersistent() == true) WiFi.persistent(false);   //disable saving wifi config into SDK flash area
+        WiFi.mode(WIFI_OFF); // off  WIFI
+        WiFi.persistent(true);   //enable saving wifi config into SDK flash area
+        wifi_state = 0;
         break;
       case TYPE_GET_Q:
         Serial.println("Get TYPE_GET_Q");
@@ -172,6 +183,21 @@ void handle_network() {
     long rssi = WiFi.RSSI();
     Serial.print("RSSI:");
     Serial.println(rssi);
+
+    if(!wifi_state) {
+      WiFi.mode(WIFI_STA);
+      WiFi.begin(ssid, password);
+      wifi_state = 1;
+      while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+      }
+      // Print local IP address and start web server
+      Serial.println("");
+      Serial.println("WiFi connected.");
+      Serial.println("IP address: ");
+      Serial.println(WiFi.localIP());
+    }
   
     if (!client.connected()) {
     //delay(1000);
@@ -209,7 +235,7 @@ void inc_timer() {
 
 void loop() {
   currentTime = millis();
-  unsigned int pin_state = digitalRead(BTN_PIN);
+  unsigned int pin_state = 0;//digitalRead(BTN_PIN);
 
   if( pin_state == 1 ){
     session_init ^= 1;
