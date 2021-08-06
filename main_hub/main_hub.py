@@ -2,6 +2,7 @@ from hub_core import HubCore
 import socketserver
 import sys
 import time
+import threading
 
 core = HubCore()
 
@@ -26,8 +27,16 @@ class SateliteHandler(socketserver.BaseRequestHandler):
                 # time.sleep(1) # pause 1 sec
 
 
+def vanadium_regression(hub_core):
+    while True:
+        hub_core.regress_vanadium()
+        time.sleep(5)
+
 if __name__ == "__main__":
     HOST, PORT = "192.168.100.111", 10000
+
+    my_thread = threading.Thread( target=vanadium_regression, name='regressor', args=[core])
+    my_thread.start()
 
     # Create the server, binding to localhost 
     with socketserver.TCPServer((HOST, PORT), SateliteHandler) as server:

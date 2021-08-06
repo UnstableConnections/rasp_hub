@@ -35,6 +35,12 @@ HUB_MAIN   = 999
 class HubCore():
     def __init__(self):
         self.conf_table = hubs_conf_table
+        self.conf_table[HUB_MAIN]['vanadium'] = 1000.
+
+    def regress_vanadium(self):
+        if self.conf_table[HUB_MAIN]['vanadium'] > 0:
+            self.conf_table[HUB_MAIN]['vanadium'] = self.conf_table[HUB_MAIN]['vanadium'] - 0.002
+            print("Vanadium left: " + str(self.conf_table[HUB_MAIN]['vanadium']))
     
 
     def handle_message(self, data, client_addr):
@@ -74,7 +80,7 @@ class HubCore():
 
                     diff = cur_time - self.conf_table[hub_id]['set_task_time']
                     print("Diff check for hub: " + str(diff))
-                    if diff > 60:
+                    if diff > 60 and self.conf_table[HUB_MAIN]['vanadium'] > 0:
                         need_get_q = True
                     
                     print("need_get_q: " + str(need_get_q))
