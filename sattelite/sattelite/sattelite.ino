@@ -235,7 +235,7 @@ void inc_timer() {
 
 void loop() {
   currentTime = millis();
-  unsigned int pin_state = 0;//digitalRead(BTN_PIN);
+  unsigned int pin_state = digitalRead(BTN_PIN);
 
   if( pin_state == 1 ){
     session_init ^= 1;
